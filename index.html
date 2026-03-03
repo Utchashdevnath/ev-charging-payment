@@ -123,7 +123,7 @@
 
         <div class="payment-details">
             <div style="margin-bottom: 10px;">Send payment to bKash:</div>
-            <div class="bkash-number">01877535765</div> <!-- Replace with your bKash number -->
+            <div class="bkash-number">01877535765</div> <!-- Your bKash number -->
             <div style="margin-top: 10px; color: #666;">(Personal bKash/Nagad account)</div>
         </div>
 
@@ -161,65 +161,16 @@
     </div>
 
     <script>
-        // Your VVAC Cloud device token
-        const VVAC_TOKEN = "3b139dbf30d9b299";
-        // VVAC API endpoint (adjust if different - check VVAC docs)
-        const VVAC_API_URL = "https://api.vvaccloud.com/v1/device/" + VVAC_TOKEN + "/command";
-
-        async function confirmPayment() {
+        function confirmPayment() {
             const energySelect = document.getElementById('energy');
             const energyKWh = parseInt(energySelect.value);
-            const confirmBtn = document.getElementById('confirmBtn');
-            const successDiv = document.getElementById('successMessage');
-            const errorDiv = document.getElementById('errorMessage');
-
-            // Disable button to prevent double-click
-            confirmBtn.disabled = true;
-            confirmBtn.textContent = "⏳ Processing...";
-
-            // Hide any previous messages
-            successDiv.style.display = 'none';
-            errorDiv.style.display = 'none';
-
-            try {
-                // Prepare the command for VVAC Cloud
-                const commandData = {
-                    command: "AUTH",
-                    energy: energyKWh,
-                    timestamp: Date.now()
-                };
-
-                // Send to VVAC Cloud API
-                const response = await fetch(VVAC_API_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(commandData)
-                });
-
-                if (response.ok) {
-                    // Success - show success message
-                    successDiv.style.display = 'block';
-                    successDiv.innerHTML = `✅ Payment confirmed! Charging started with ${energyKWh} kWh credit.`;
-                    
-                    // Optional: reset button after 5 seconds
-                    setTimeout(() => {
-                        confirmBtn.disabled = false;
-                        confirmBtn.textContent = "✅ I Have Sent the Money";
-                    }, 5000);
-                } else {
-                    // Handle HTTP error
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                errorDiv.style.display = 'block';
-                
-                // Re-enable button
-                confirmBtn.disabled = false;
-                confirmBtn.textContent = "✅ I Have Sent the Money";
-            }
+            
+            // Redirect to Node B's local endpoint
+            // Using mDNS hostname (nodeb.local) – works if your network supports it
+            window.location.href = `http://nodeb.local/pay?energy=${energyKWh}`;
+            
+            // If mDNS doesn't work, replace with Node B's IP address:
+            // window.location.href = `http://10.38.152.34/pay?energy=${energyKWh}`;
         }
     </script>
 </body>
