@@ -162,16 +162,11 @@
 
     <script>
         function confirmPayment() {
-            const energySelect = document.getElementById('energy');
-            const energyKWh = parseInt(energySelect.value);
-            
-            // Redirect to Node B's local endpoint
-            // Using mDNS hostname (nodeb.local) – works if your network supports it
-            window.location.href = `http://nodeb.local/pay?energy=${energyKWh}`;
-            
-            // If mDNS doesn't work, replace with Node B's IP address:
-            // window.location.href = `http://10.38.152.34/pay?energy=${energyKWh}`;
-        }
+    const energySelect = document.getElementById('energy');
+    const energyKWh = parseInt(energySelect.value);
+    // Redirect using Node B's IP address
+    window.location.href = `http://10.38.152.34/pay?energy=${energyKWh}`;
+}
     </script>
 </body>
 </html>
