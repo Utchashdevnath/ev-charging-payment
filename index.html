@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EV Charging Payment - Node A</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .payment-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 400px;
+            width: 100%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h2 {
+            color: #333;
+            margin-top: 0;
+            text-align: center;
+        }
+        .pole-info {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .payment-details {
+            margin: 20px 0;
+            padding: 15px;
+            background: #e8f4fd;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .bkash-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #e2136e;
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            border: 2px dashed #e2136e;
+        }
+        .amount-selector {
+            margin: 20px 0;
+        }
+        select {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin-top: 5px;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+        .instructions {
+            margin-top: 20px;
+            padding: 15px;
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .success-message {
+            display: none;
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            text-align: center;
+            border: 1px solid #c3e6cb;
+        }
+        .error-message {
+            display: none;
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            text-align: center;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="payment-card">
+        <h2>⚡ EV Charging Payment</h2>
+        
+        <div class="pole-info">
+            <strong>Pole ID:</strong> Node A<br>
+            <strong>Location:</strong> Smart Street Light System
+        </div>
+
+        <div class="payment-details">
+            <div style="margin-bottom: 10px;">Send payment to bKash:</div>
+            <div class="bkash-number">01877535765</div> <!-- Replace with your bKash number -->
+            <div style="margin-top: 10px; color: #666;">(Personal bKash/Nagad account)</div>
+        </div>
+
+        <div class="amount-selector">
+            <label for="energy"><strong>Select charging amount:</strong></label>
+            <select id="energy">
+                <option value="5">5 kWh - BDT 50</option>
+                <option value="10">10 kWh - BDT 100</option>
+                <option value="20">20 kWh - BDT 200</option>
+                <option value="50">50 kWh - BDT 500</option>
+            </select>
+        </div>
+
+        <button id="confirmBtn" onclick="confirmPayment()">
+            ✅ I Have Sent the Money
+        </button>
+
+        <div class="instructions">
+            <strong>📋 Instructions:</strong>
+            <ol style="margin: 10px 0 0 20px; padding-left: 0;">
+                <li>Open your bKash/Nagad app</li>
+                <li>Send the exact amount to the number above</li>
+                <li>After sending, click the button above</li>
+                <li>Charging will start automatically at the pole</li>
+            </ol>
+        </div>
+
+        <div id="successMessage" class="success-message">
+            ✅ Payment confirmed! Charging started at the pole.
+        </div>
+
+        <div id="errorMessage" class="error-message">
+            ❌ Failed to start charging. Please try again or contact support.
+        </div>
+    </div>
+
+    <script>
+        // Your VVAC Cloud device token
+        const VVAC_TOKEN = "3b139dbf30d9b299";
+        // VVAC API endpoint (adjust if different - check VVAC docs)
+        const VVAC_API_URL = "https://api.vvaccloud.com/v1/device/" + VVAC_TOKEN + "/command";
+
+        async function confirmPayment() {
+            const energySelect = document.getElementById('energy');
+            const energyKWh = parseInt(energySelect.value);
+            const confirmBtn = document.getElementById('confirmBtn');
+            const successDiv = document.getElementById('successMessage');
+            const errorDiv = document.getElementById('errorMessage');
+
+            // Disable button to prevent double-click
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = "⏳ Processing...";
+
+            // Hide any previous messages
+            successDiv.style.display = 'none';
+            errorDiv.style.display = 'none';
+
+            try {
+                // Prepare the command for VVAC Cloud
+                const commandData = {
+                    command: "AUTH",
+                    energy: energyKWh,
+                    timestamp: Date.now()
+                };
+
+                // Send to VVAC Cloud API
+                const response = await fetch(VVAC_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(commandData)
+                });
+
+                if (response.ok) {
+                    // Success - show success message
+                    successDiv.style.display = 'block';
+                    successDiv.innerHTML = `✅ Payment confirmed! Charging started with ${energyKWh} kWh credit.`;
+                    
+                    // Optional: reset button after 5 seconds
+                    setTimeout(() => {
+                        confirmBtn.disabled = false;
+                        confirmBtn.textContent = "✅ I Have Sent the Money";
+                    }, 5000);
+                } else {
+                    // Handle HTTP error
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                errorDiv.style.display = 'block';
+                
+                // Re-enable button
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = "✅ I Have Sent the Money";
+            }
+        }
+    </script>
+</body>
+</html>
