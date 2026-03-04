@@ -111,6 +111,8 @@
             border: 1px solid #f5c6cb;
         }
     </style>
+    <!-- Paho MQTT JavaScript library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.1.0/paho-mqtt.min.js"></script>
 </head>
 <body>
     <div class="payment-card">
@@ -152,21 +154,62 @@
         </div>
 
         <div id="successMessage" class="success-message">
-            ✅ Payment confirmed! Charging started at the pole.
+            ✅ Command sent! Charging should start at the pole.
         </div>
 
         <div id="errorMessage" class="error-message">
-            ❌ Failed to start charging. Please try again or contact support.
+            ❌ Failed to send command. Please try again or contact support.
         </div>
     </div>
 
     <script>
         function confirmPayment() {
-    const energySelect = document.getElementById('energy');
-    const energyKWh = parseInt(energySelect.value);
-    // Redirect using Node B's IP address
-    window.location.href = `http://10.38.152.34/pay?energy=${energyKWh}`;
-}
+            const energy = document.getElementById('energy').value;
+            const confirmBtn = document.getElementById('confirmBtn');
+            const successDiv = document.getElementById('successMessage');
+            const errorDiv = document.getElementById('errorMessage');
+
+            // Disable button to prevent double-click
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = "⏳ Sending command...";
+
+            // Hide any previous messages
+            successDiv.style.display = 'none';
+            errorDiv.style.display = 'none';
+
+            // MQTT over WebSockets using Paho
+            const clientId = "web-client-" + Math.random().toString(36).substring(7);
+            const client = new Paho.MQTT.Client("broker.hivemq.com", 8000, clientId);
+
+            client.connect({
+                onSuccess: function() {
+                    console.log("Connected to MQTT broker");
+                    const message = new Paho.MQTT.Message("AUTH," + energy);
+                    message.destinationName = "nodeb/commands";
+                    client.send(message);
+                    console.log("Command sent: AUTH," + energy);
+                    client.disconnect();
+
+                    // Show success
+                    successDiv.style.display = 'block';
+                    successDiv.innerHTML = `✅ Command sent! Charging started with ${energy} kWh credit.`;
+                    
+                    // Re-enable button after a few seconds
+                    setTimeout(() => {
+                        confirmBtn.disabled = false;
+                        confirmBtn.textContent = "✅ I Have Sent the Money";
+                    }, 5000);
+                },
+                onFailure: function(err) {
+                    console.error("MQTT connection failed:", err);
+                    errorDiv.style.display = 'block';
+                    
+                    // Re-enable button
+                    confirmBtn.disabled = false;
+                    confirmBtn.textContent = "✅ I Have Sent the Money";
+                }
+            });
+        }
     </script>
 </body>
 </html>
