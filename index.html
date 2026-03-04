@@ -142,7 +142,7 @@ function confirmPayment() {
     };
 
     // Set timeout for connection (30 seconds)
-    const connectOptions = {
+    const connectOptions = { 
         onSuccess: function() {
             console.log("Connected to MQTT broker");
             const message = new Paho.MQTT.Message("AUTH," + energy);
