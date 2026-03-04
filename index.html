@@ -1,40 +1,43 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>MQTT Test</title>
-    <!-- Load the MQTT library from a CDN -->
+    <title>MQTT Test (Secure)</title>
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 </head>
 <body>
-    <h1>MQTT Command Test</h1>
+    <h1>MQTT Command Test (Secure)</h1>
     <button id="sendBtn">Send Test Command to Node B</button>
-    <p id="status">Ready</p>
+    <p id="status">Connecting...</p>
 
     <script>
-        const brokerUrl = 'ws://broker.emqx.io:8083/mqtt'; // Public broker, WebSocket port
+        // Use secure WebSocket (wss://) on port 8084
+        const brokerUrl = 'wss://broker.emqx.io:8084/mqtt';
         const clientId = 'web_client_' + Math.random().toString(16).substr(2, 8);
         const commandTopic = 'test/command/nodeA';
 
-        const client = mqtt.connect(brokerUrl, { clientId: clientId });
+        const client = mqtt.connect(brokerUrl, { 
+            clientId: clientId,
+            // Sometimes you may need to disable SSL verification for self-signed certs, but EMQX uses a trusted CA.
+        });
 
         client.on('connect', function () {
-            document.getElementById('status').innerText = 'Connected to MQTT broker!';
-            console.log('Connected to MQTT broker');
+            document.getElementById('status').innerText = '✅ Connected to secure MQTT broker!';
+            console.log('Connected to secure MQTT broker');
         });
 
         client.on('error', function (err) {
-            document.getElementById('status').innerText = 'Connection Error';
+            document.getElementById('status').innerText = '❌ Connection Error: ' + err.message;
             console.error('Connection error: ', err);
         });
 
         document.getElementById('sendBtn').addEventListener('click', function() {
-            const payload = "AUTH,5"; // The command for Node A
+            const payload = "AUTH,5";
             client.publish(commandTopic, payload, { qos: 1 }, function(err) {
                 if (!err) {
-                    document.getElementById('status').innerText = 'Command sent: ' + payload;
+                    document.getElementById('status').innerText = '✅ Command sent: ' + payload;
                     console.log('Command sent successfully');
                 } else {
-                    document.getElementById('status').innerText = 'Publish failed';
+                    document.getElementById('status').innerText = '❌ Publish failed';
                     console.error('Publish failed: ', err);
                 }
             });
