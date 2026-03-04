@@ -1,47 +1,211 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>MQTT Test (Secure)</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EV Charging Payment - Node A</title>
+    <style>
+        /* (keep your existing styles – unchanged) */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .payment-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 400px;
+            width: 100%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h2 {
+            color: #333;
+            margin-top: 0;
+            text-align: center;
+        }
+        .pole-info {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .payment-details {
+            margin: 20px 0;
+            padding: 15px;
+            background: #e8f4fd;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .bkash-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #e2136e;
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            border: 2px dashed #e2136e;
+        }
+        .amount-selector {
+            margin: 20px 0;
+        }
+        select {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin-top: 5px;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+        .instructions {
+            margin-top: 20px;
+            padding: 15px;
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .success-message {
+            display: none;
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            text-align: center;
+            border: 1px solid #c3e6cb;
+        }
+        .error-message {
+            display: none;
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            text-align: center;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 </head>
 <body>
-    <h1>MQTT Command Test (Secure)</h1>
-    <button id="sendBtn">Send Test Command to Node B</button>
-    <p id="status">Connecting...</p>
+    <div class="payment-card">
+        <h2>⚡ EV Charging Payment</h2>
+        
+        <div class="pole-info">
+            <strong>Pole ID:</strong> Node A<br>
+            <strong>Location:</strong> Smart Street Light System
+        </div>
+
+        <div class="payment-details">
+            <div style="margin-bottom: 10px;">Send payment to bKash:</div>
+            <div class="bkash-number">01877535765</div>
+            <div style="margin-top: 10px; color: #666;">(Personal bKash/Nagad account)</div>
+        </div>
+
+        <div class="amount-selector">
+            <label for="energy"><strong>Select charging amount:</strong></label>
+            <select id="energy">
+                <option value="5">5 kWh - BDT 50</option>
+                <option value="10">10 kWh - BDT 100</option>
+                <option value="20">20 kWh - BDT 200</option>
+                <option value="50">50 kWh - BDT 500</option>
+            </select>
+        </div>
+
+        <button id="confirmBtn" onclick="confirmPayment()">
+            ✅ I Have Sent the Money
+        </button>
+
+        <div class="instructions">
+            <strong>📋 Instructions:</strong>
+            <ol style="margin: 10px 0 0 20px; padding-left: 0;">
+                <li>Open your bKash/Nagad app</li>
+                <li>Send the exact amount to the number above</li>
+                <li>After sending, click the button above</li>
+                <li>Charging will start automatically at the pole</li>
+            </ol>
+        </div>
+
+        <div id="successMessage" class="success-message">
+            ✅ Command sent! Charging should start at the pole.
+        </div>
+
+        <div id="errorMessage" class="error-message">
+            ❌ Failed to send command. Please try again or contact support.
+        </div>
+    </div>
 
     <script>
-        // Use secure WebSocket (wss://) on port 8084
+        // MQTT settings (using secure WebSockets)
         const brokerUrl = 'wss://broker.emqx.io:8084/mqtt';
-        const clientId = 'web_client_' + Math.random().toString(16).substr(2, 8);
-        const commandTopic = 'test/command/nodeA';
+        const clientId = 'web_' + Math.random().toString(36).substring(7);
+        const commandTopic = 'test/command/nodeA';   // same as test
 
-        const client = mqtt.connect(brokerUrl, { 
-            clientId: clientId,
-            // Sometimes you may need to disable SSL verification for self-signed certs, but EMQX uses a trusted CA.
-        });
+        const client = mqtt.connect(brokerUrl, { clientId: clientId });
 
         client.on('connect', function () {
-            document.getElementById('status').innerText = '✅ Connected to secure MQTT broker!';
-            console.log('Connected to secure MQTT broker');
+            console.log('✅ Connected to secure MQTT broker');
         });
 
         client.on('error', function (err) {
-            document.getElementById('status').innerText = '❌ Connection Error: ' + err.message;
-            console.error('Connection error: ', err);
+            console.error('MQTT error:', err);
+            document.getElementById('errorMessage').style.display = 'block';
+            document.getElementById('errorMessage').innerHTML = '❌ Could not connect to command server.';
         });
 
-        document.getElementById('sendBtn').addEventListener('click', function() {
-            const payload = "AUTH,5";
+        function confirmPayment() {
+            const energy = document.getElementById('energy').value;
+            const confirmBtn = document.getElementById('confirmBtn');
+            const successDiv = document.getElementById('successMessage');
+            const errorDiv = document.getElementById('errorMessage');
+
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = "⏳ Sending command...";
+            successDiv.style.display = 'none';
+            errorDiv.style.display = 'none';
+
+            // Publish the command
+            const payload = "AUTH," + energy;
             client.publish(commandTopic, payload, { qos: 1 }, function(err) {
                 if (!err) {
-                    document.getElementById('status').innerText = '✅ Command sent: ' + payload;
-                    console.log('Command sent successfully');
+                    console.log('✅ Command sent: ' + payload);
+                    successDiv.style.display = 'block';
+                    successDiv.innerHTML = `✅ Command sent! Charging started with ${energy} kWh credit.`;
                 } else {
-                    document.getElementById('status').innerText = '❌ Publish failed';
-                    console.error('Publish failed: ', err);
+                    console.error('Publish failed:', err);
+                    errorDiv.style.display = 'block';
                 }
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = "✅ I Have Sent the Money";
             });
-        });
+        }
     </script>
 </body>
 </html>
