@@ -5,12 +5,162 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EV Charging Payment - Node A</title>
     <style>
-        /* (keep your existing CSS) */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .payment-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 400px;
+            width: 100%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h2 {
+            color: #333;
+            margin-top: 0;
+            text-align: center;
+        }
+        .pole-info {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .payment-details {
+            margin: 20px 0;
+            padding: 15px;
+            background: #e8f4fd;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .bkash-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #e2136e;
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            border: 2px dashed #e2136e;
+        }
+        .amount-selector {
+            margin: 20px 0;
+        }
+        select {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin-top: 5px;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+        .instructions {
+            margin-top: 20px;
+            padding: 15px;
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .success-message {
+            display: none;
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            text-align: center;
+            border: 1px solid #c3e6cb;
+        }
+        .error-message {
+            display: none;
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            text-align: center;
+            border: 1px solid #f5c6cb;
+        }
     </style>
+    <!-- Paho MQTT JavaScript library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.1.0/paho-mqtt.min.js"></script>
 </head>
 <body>
-    <!-- (keep your existing HTML structure) -->
+    <div class="payment-card">
+        <h2>⚡ EV Charging Payment</h2>
+        
+        <div class="pole-info">
+            <strong>Pole ID:</strong> Node A<br>
+            <strong>Location:</strong> Smart Street Light System
+        </div>
+
+        <div class="payment-details">
+            <div style="margin-bottom: 10px;">Send payment to bKash:</div>
+            <div class="bkash-number">01877535765</div> <!-- Your bKash number -->
+            <div style="margin-top: 10px; color: #666;">(Personal bKash/Nagad account)</div>
+        </div>
+
+        <div class="amount-selector">
+            <label for="energy"><strong>Select charging amount:</strong></label>
+            <select id="energy">
+                <option value="5">5 kWh - BDT 50</option>
+                <option value="10">10 kWh - BDT 100</option>
+                <option value="20">20 kWh - BDT 200</option>
+                <option value="50">50 kWh - BDT 500</option>
+            </select>
+        </div>
+
+        <button id="confirmBtn" onclick="confirmPayment()">
+            ✅ I Have Sent the Money
+        </button>
+
+        <div class="instructions">
+            <strong>📋 Instructions:</strong>
+            <ol style="margin: 10px 0 0 20px; padding-left: 0;">
+                <li>Open your bKash/Nagad app</li>
+                <li>Send the exact amount to the number above</li>
+                <li>After sending, click the button above</li>
+                <li>Charging will start automatically at the pole</li>
+            </ol>
+        </div>
+
+        <div id="successMessage" class="success-message">
+            ✅ Command sent! Charging should start at the pole.
+        </div>
+
+        <div id="errorMessage" class="error-message">
+            ❌ Failed to send command. Please try again or contact support.
+        </div>
+    </div>
 
     <script>
         function confirmPayment() {
@@ -19,31 +169,49 @@
             const successDiv = document.getElementById('successMessage');
             const errorDiv = document.getElementById('errorMessage');
 
+            // Disable button to prevent double-click
             confirmBtn.disabled = true;
             confirmBtn.textContent = "⏳ Sending command...";
+
+            // Hide previous messages
             successDiv.style.display = 'none';
             errorDiv.style.display = 'none';
 
-            // Use secure WebSockets (wss) on port 8884 for HTTPS pages
-            const clientId = "web-client-" + Math.random().toString(36).substring(7);
-            const client = new Paho.MQTT.Client("wss://broker.hivemq.com:8884", clientId);
+            // MQTT connection details
+            const broker = "broker.hivemq.com";
+            const port = 8000; // WebSocket port
+            const clientId = "client-" + Math.random().toString(36).substring(7);
+            const client = new Paho.MQTT.Client(broker, port, clientId);
 
+            // Set callback for connection loss (optional)
+            client.onConnectionLost = function(response) {
+                console.log("Connection lost: " + response.errorMessage);
+                errorDiv.style.display = 'block';
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = "✅ I Have Sent the Money";
+            };
+
+            // Set callback for message arrival (not needed here)
+            client.onMessageArrived = function(message) {};
+
+            // Connect to broker
             client.connect({
                 onSuccess: function() {
                     console.log("Connected to MQTT broker");
+                    // Create and send message
                     const message = new Paho.MQTT.Message("AUTH," + energy);
                     message.destinationName = "nodeb/commands";
                     client.send(message);
                     console.log("Command sent: AUTH," + energy);
+                    
+                    // Disconnect (optional)
                     client.disconnect();
 
+                    // Show success
                     successDiv.style.display = 'block';
                     successDiv.innerHTML = `✅ Command sent! Charging started with ${energy} kWh credit.`;
-                    
-                    setTimeout(() => {
-                        confirmBtn.disabled = false;
-                        confirmBtn.textContent = "✅ I Have Sent the Money";
-                    }, 5000);
+                    confirmBtn.disabled = false;
+                    confirmBtn.textContent = "✅ I Have Sent the Money";
                 },
                 onFailure: function(err) {
                     console.error("MQTT connection failed:", err);
