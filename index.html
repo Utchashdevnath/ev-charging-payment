@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EV Charging Payment - Node A</title>
     <style>
-        /* Your existing styles – unchanged */
+        /* (keep your existing styles – unchanged) */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -112,21 +112,29 @@
             border: 1px solid #f5c6cb;
         }
     </style>
-    <!-- Use mqtt.js library (more reliable) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/5.0.0/mqtt.min.js"></script>
+    <!-- Firebase compatibility SDK (app + database) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <script>
-        window.addEventListener('load', function() {
-            if (typeof mqtt !== 'undefined') {
-                console.log("✅ mqtt.js library loaded successfully.");
-            } else {
-                console.error("❌ mqtt.js library failed to load.");
-                document.getElementById('errorMessage').style.display = 'block';
-                document.getElementById('errorMessage').innerHTML = "❌ Failed to load MQTT library. Please refresh or try a different browser.";
-            }
-        });
+        // Your new Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCTB0Syg-OimiCR4ds9J8ss0Yw6yLZvv_I",
+            authDomain: "ev-charging-9be04.firebaseapp.com",
+            projectId: "ev-charging-9be04",
+            storageBucket: "ev-charging-9be04.firebasestorage.app",
+            messagingSenderId: "198512226417",
+            appId: "1:198512226417:web:bbe4b3db21acc9a99e2bd0",
+            measurementId: "G-C7V70D7EZL"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        console.log("Firebase initialized (compat) with new project.");
     </script>
 </head>
 <body>
+    <!-- Your existing HTML content (same as before) -->
     <div class="payment-card">
         <h2>⚡ EV Charging Payment</h2>
         
@@ -137,7 +145,7 @@
 
         <div class="payment-details">
             <div style="margin-bottom: 10px;">Send payment to bKash:</div>
-            <div class="bkash-number">01877535765</div> <!-- Your bKash number -->
+            <div class="bkash-number">01877535765</div>
             <div style="margin-top: 10px; color: #666;">(Personal bKash/Nagad account)</div>
         </div>
 
@@ -176,13 +184,6 @@
 
     <script>
     function confirmPayment() {
-        // Check if library loaded
-        if (typeof mqtt === 'undefined') {
-            document.getElementById('errorMessage').style.display = 'block';
-            document.getElementById('errorMessage').innerHTML = "❌ MQTT library not loaded. Please refresh.";
-            return;
-        }
-
         const energy = document.getElementById('energy').value;
         const confirmBtn = document.getElementById('confirmBtn');
         const successDiv = document.getElementById('successMessage');
@@ -193,42 +194,26 @@
         successDiv.style.display = 'none';
         errorDiv.style.display = 'none';
 
-        // EMQX public broker (WebSocket)
-        const brokerUrl = "ws://broker.emqx.io:8083/mqtt";
-        const clientId = "client-" + Math.random().toString(36).substring(7);
-
-        const client = mqtt.connect(brokerUrl, {
-            clientId: clientId,
-            clean: true,
-            connectTimeout: 30000,
-        });
-
-        client.on('connect', function() {
-            console.log("✅ Connected to MQTT broker");
-            // Publish command
-            client.publish("nodeb/commands", "AUTH," + energy, { qos: 0 }, function(err) {
-                if (!err) {
-                    console.log("✅ Command sent: AUTH," + energy);
-                    successDiv.style.display = 'block';
-                    successDiv.innerHTML = `✅ Command sent! Charging started with ${energy} kWh credit.`;
-                } else {
-                    console.error("Publish failed:", err);
-                    errorDiv.style.display = 'block';
-                    errorDiv.innerHTML = "❌ Failed to send command. Please try again.";
-                }
-                client.end();
-                confirmBtn.disabled = false;
-                confirmBtn.textContent = "✅ I Have Sent the Money";
-            });
-        });
-
-        client.on('error', function(err) {
-            console.error("❌ MQTT connection error:", err);
-            errorDiv.style.display = 'block';
-            errorDiv.innerHTML = "❌ Could not connect to command server. Check your internet or try again.";
+        // Write command to Firebase Realtime Database
+        const commandRef = database.ref('commands/nodeA');
+        commandRef.set({
+            command: "AUTH",
+            energy: parseInt(energy),
+            timestamp: Date.now()
+        })
+        .then(() => {
+            console.log("✅ Command written to Firebase");
+            successDiv.style.display = 'block';
+            successDiv.innerHTML = `✅ Command sent! Charging started with ${energy} kWh credit.`;
             confirmBtn.disabled = false;
             confirmBtn.textContent = "✅ I Have Sent the Money";
-            client.end();
+        })
+        .catch((error) => {
+            console.error("❌ Firebase write failed:", error);
+            errorDiv.style.display = 'block';
+            errorDiv.innerHTML = "❌ Could not send command. Check your internet.";
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = "✅ I Have Sent the Money";
         });
     }
     </script>
