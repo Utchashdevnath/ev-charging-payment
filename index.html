@@ -117,15 +117,16 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <script>
         // Your new Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyCTB0Syg-OimiCR4ds9J8ss0Yw6yLZvv_I",
-            authDomain: "ev-charging-9be04.firebaseapp.com",
-            projectId: "ev-charging-9be04",
-            storageBucket: "ev-charging-9be04.firebasestorage.app",
-            messagingSenderId: "198512226417",
-            appId: "1:198512226417:web:bbe4b3db21acc9a99e2bd0",
-            measurementId: "G-C7V70D7EZL"
-        };
+    const firebaseConfig = {
+    apiKey: "AIzaSyCTB0Syg-OimiCR4ds9J8ss0Yw6yLZvv_I",
+    authDomain: "ev-charging-9be04.firebaseapp.com",
+    databaseURL: "https://ev-charging-9be04-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "ev-charging-9be04",
+    storageBucket: "ev-charging-9be04.firebasestorage.app",
+    messagingSenderId: "198512226417",
+    appId: "1:198512226417:web:bbe4b3db21acc9a99e2bd0",
+    measurementId: "G-C7V70D7EZL"
+};
 
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
