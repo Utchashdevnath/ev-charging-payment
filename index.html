@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EV Charging Payment - Node A</title>
     <style>
-        /* (Keep your existing styles – they are fine) */
+        /* Keep your existing styles – they are fine */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -112,8 +112,18 @@
             border: 1px solid #f5c6cb;
         }
     </style>
-    <!-- Paho MQTT JavaScript library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.1.0/paho-mqtt.min.js"></script>
+    <!-- Use jsDelivr CDN for Paho MQTT (more reliable) -->
+    <script src="https://cdn.jsdelivr.net/npm/paho-mqtt@1.1.0/paho-mqtt.min.js"></script>
+    <script>
+        // Check if library loaded correctly
+        if (typeof Paho === 'undefined') {
+            console.error("Paho MQTT library failed to load. Please check your internet connection or try a different network.");
+            document.addEventListener('DOMContentLoaded', function() {
+                document.getElementById('errorMessage').style.display = 'block';
+                document.getElementById('errorMessage').innerHTML = "❌ Failed to load MQTT library. Please refresh or try again later.";
+            });
+        }
+    </script>
 </head>
 <body>
     <div class="payment-card">
@@ -165,6 +175,13 @@
 
     <script>
     function confirmPayment() {
+        // Ensure library loaded
+        if (typeof Paho === 'undefined') {
+            document.getElementById('errorMessage').style.display = 'block';
+            document.getElementById('errorMessage').innerHTML = "❌ MQTT library not loaded. Please refresh.";
+            return;
+        }
+
         const energy = document.getElementById('energy').value;
         const confirmBtn = document.getElementById('confirmBtn');
         const successDiv = document.getElementById('successMessage');
@@ -181,7 +198,7 @@
         // MQTT connection details for HiveMQ (WebSocket)
         const broker = "broker.hivemq.com";
         const port = 8000;
-        const path = "/mqtt";  // <-- IMPORTANT: correct WebSocket path
+        const path = "/mqtt";  // Correct WebSocket path for HiveMQ
         const clientId = "client-" + Math.random().toString(36).substring(7);
 
         // Create client WITH PATH
