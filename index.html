@@ -112,57 +112,62 @@
         }
     </style>
     <!-- Paho MQTT JavaScript library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.1.0/paho-mqtt.min.js"></script>
-</head>
-<body>
-    <div class="payment-card">
-        <h2>⚡ EV Charging Payment</h2>
-        
-        <div class="pole-info">
-            <strong>Pole ID:</strong> Node A<br>
-            <strong>Location:</strong> Smart Street Light System
-        </div>
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.1.0/paho-mqtt.min.js"></script>
+<script>
+function confirmPayment() {
+    const energy = document.getElementById('energy').value;
+    const confirmBtn = document.getElementById('confirmBtn');
+    const successDiv = document.getElementById('successMessage');
+    const errorDiv = document.getElementById('errorMessage');
 
-        <div class="payment-details">
-            <div style="margin-bottom: 10px;">Send payment to bKash:</div>
-            <div class="bkash-number">01877535765</div> <!-- Your bKash number -->
-            <div style="margin-top: 10px; color: #666;">(Personal bKash/Nagad account)</div>
-        </div>
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = "⏳ Sending command...";
+    successDiv.style.display = 'none';
+    errorDiv.style.display = 'none';
 
-        <div class="amount-selector">
-            <label for="energy"><strong>Select charging amount:</strong></label>
-            <select id="energy">
-                <option value="5">5 kWh - BDT 50</option>
-                <option value="10">10 kWh - BDT 100</option>
-                <option value="20">20 kWh - BDT 200</option>
-                <option value="50">50 kWh - BDT 500</option>
-            </select>
-        </div>
+    const broker = "broker.hivemq.com";
+    const port = 8000;
+    const path = "/mqtt";  // ✅ Important: correct WebSocket path for HiveMQ
+    const clientId = "client-" + Math.random().toString(36).substring(7);
 
-        <button id="confirmBtn" onclick="confirmPayment()">
-            ✅ I Have Sent the Money
-        </button>
+    const client = new Paho.MQTT.Client(broker, port, path, clientId);
 
-        <div class="instructions">
-            <strong>📋 Instructions:</strong>
-            <ol style="margin: 10px 0 0 20px; padding-left: 0;">
-                <li>Open your bKash/Nagad app</li>
-                <li>Send the exact amount to the number above</li>
-                <li>After sending, click the button above</li>
-                <li>Charging will start automatically at the pole</li>
-            </ol>
-        </div>
+    // Set callback for connection loss (optional)
+    client.onConnectionLost = function(response) {
+        console.log("Connection lost: " + response.errorMessage);
+        errorDiv.style.display = 'block';
+        errorDiv.innerHTML = "❌ Connection lost. Please try again.";
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = "✅ I Have Sent the Money";
+    };
 
-        <div id="successMessage" class="success-message">
-            ✅ Command sent! Charging should start at the pole.
-        </div>
+    // Set timeout for connection (30 seconds)
+    const connectOptions = {
+        onSuccess: function() {
+            console.log("Connected to MQTT broker");
+            const message = new Paho.MQTT.Message("AUTH," + energy);
+            message.destinationName = "nodeb/commands";
+            client.send(message);
+            console.log("Command sent: AUTH," + energy);
+            client.disconnect();
+            successDiv.style.display = 'block';
+            successDiv.innerHTML = `✅ Command sent! Charging started with ${energy} kWh credit.`;
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = "✅ I Have Sent the Money";
+        },
+        onFailure: function(err) {
+            console.error("MQTT connection failed:", err);
+            errorDiv.style.display = 'block';
+            errorDiv.innerHTML = "❌ Could not connect to command server. Check your internet or try again.";
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = "✅ I Have Sent the Money";
+        },
+        timeout: 30  // seconds
+    };
 
-        <div id="errorMessage" class="error-message">
-            ❌ Failed to send command. Please try again or contact support.
-        </div>
-    </div>
-
-    <script>
+    client.connect(connectOptions);
+}
+</script>
         function confirmPayment() {
             const energy = document.getElementById('energy').value;
             const confirmBtn = document.getElementById('confirmBtn');
