@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EV Charging Payment - Node A</title>
     <style>
+        /* (Keep your existing styles – they are fine) */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -180,10 +181,10 @@
         // MQTT connection details for HiveMQ (WebSocket)
         const broker = "broker.hivemq.com";
         const port = 8000;
-        const path = "/mqtt";  // Important: correct WebSocket path for HiveMQ
+        const path = "/mqtt";  // <-- IMPORTANT: correct WebSocket path
         const clientId = "client-" + Math.random().toString(36).substring(7);
 
-        // Create client with path
+        // Create client WITH PATH
         const client = new Paho.MQTT.Client(broker, port, path, clientId);
 
         // Set callback for connection loss
@@ -202,7 +203,7 @@
         const connectOptions = {
             onSuccess: function() {
                 console.log("Connected to MQTT broker");
-                // Create and send message
+                // Create and send message – format "AUTH,5"
                 const message = new Paho.MQTT.Message("AUTH," + energy);
                 message.destinationName = "nodeb/commands";
                 client.send(message);
@@ -222,7 +223,7 @@
                 confirmBtn.disabled = false;
                 confirmBtn.textContent = "✅ I Have Sent the Money";
             },
-            timeout: 30  // seconds
+            timeout: 30
         };
 
         client.connect(connectOptions);
